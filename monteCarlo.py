@@ -49,7 +49,12 @@ class MCTS:
          
          Once time is up use getChildWithMaxScore() to pick the node to move to
         """
-        print("MCTS: your code goes here. 10pt.")
+        
+		node = self.root
+		self.expandNode(node)
+
+		for child in node.children:
+			winner = simulateRandomPlay(child)
 
         winnerNode = self.root.getChildWithMaxScore()
         assert(winnerNode is not None)
@@ -59,51 +64,75 @@ class MCTS:
     """SELECT stage function. walks down the tree using findBestNodeWithUCT()"""
     def selectNode(self, nd):
         node = nd
-        print("Your code goes here 5pt.")
-        return node
+        while node.children is not empty:
+			node = findBestNodeWithUCT(self, node)
+
+		return
 
     def findBestNodeWithUCT(self, nd):
-        """finds the child node with the highest UCT. 
-        Parse nd's children and use uctValue() to collect ucts 
-        for the children.....
-        Make sure to handle the case when uct value of 2 or more children
-        nodes are the same."""
-        childUCT = []
-        print("Your code goes here 5pt.")
-        return None
+        maxUCT = -float('inf')
+		chosenChild = nd
+		for child in nd.children:
+			uct = uctValue(self, child.visitCount, child.winScore)
+			if uct > maxUCT:
+				maxUCT = uct
+				chosenChild = child
 
+
+        return chosenChild
 
     def uctValue(self, parentVisit, nodeScore, nodeVisit):
-        """compute Upper Confidence Value for a node"""
-        print("Your code goes here 3pt.")
-        pass
-
-   
+        UCT = (nodeScore/nodeVisit) + self.exploreFactor * sqrt(log(parentVisit) / nodeVisit)
+		return UCT
    
     def expandNode(self, nd):
-        """generate the child nodes for node nd. For convenience, generate
-        all the child nodes and attach them to nd."""
         stat = nd.state
-        print("Your code goes here 5pt.")
-        pass
+        if self.game.terminal_test(stat):
+			return
+
+		possible_moves = self.game.actions(stat)
+
+		for move in possible_moves:
+			new_state = self.game.result(stat, move)
+			new_node = self.Node(new_state, par=nd)
+			nd.children.append(new_node)
 
     """SIMULATE stage function"""
     def simulateRandomPlay(self, nd):
-        """
-        This function retuns the result of simulating off of node nd a 
-        termination node, and returns the winner 'X' or 'O' or 0 if tie.
-        Note: pay attention nd may be itself a termination node. Use compute_utility 
-        to check for it.
-        """
-        print("Your code goes here 7pt.")
+        current_state = nd.state
+		
+		while not self.game.terminal_test(current_state):
+			possible_moves = self.game.actions(current_state)
 
-        pass
+			if not possible_moves:
+				break
+
+		random_move = random.choice(possible_moves)
+		current_state = self.game.result(current_state, random_move)
+		utility_for_X = self.game.utility(current_state, 'X')
+
+		if utility_for_X == self.game.k:
+            return 'X'
+        elif utility_for_X == -self.game.k:
+            return 'O'
+        else:
+            return 0 
 
 
     def backPropagation(self, nd, winningPlayer):
-        """propagate upword to update score and visit count from
-        the current leaf node to the root node."""
-        
-        print("Your code goes here 5pt.")
+        node = nd
+
+		while node != None:
+			node.visitCount += 1
+
+			if winningPlayer == node.state.to_move
+				node.winScore += 1
+
+			elif winningPlayer == 'O':
+				node.winScore -= 1
+
+			node = node.par
+
+		return
 
 
