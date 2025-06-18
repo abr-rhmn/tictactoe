@@ -50,11 +50,21 @@ class MCTS:
          Once time is up use getChildWithMaxScore() to pick the node to move to
         """
         
-		node = self.root
-		self.expandNode(node)
+		while time.perf_counter() < end:
+            node_to_explore = self.selectNode(self.root)
 
-		for child in node.children:
-			winner = simulateRandomPlay(child)
+            if not self.game.terminal_test(node_to_explore.state) and not node_to_explore.children:
+                self.expandNode(node_to_explore)
+                if node_to_explore.children:
+                    node_for_simulation = random.choice(node_to_explore.children)
+                else:
+                    node_for_simulation = node_to_explore
+            else:
+                node_for_simulation = node_to_explore
+
+            winning_player = self.simulateRandomPlay(node_for_simulation)
+
+            self.backPropagation(node_for_simulation, winning_player)
 
         winnerNode = self.root.getChildWithMaxScore()
         assert(winnerNode is not None)
