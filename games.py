@@ -65,16 +65,16 @@ def minmax(game, state):
 		memo[state_key] = v # Store result in cache
 		return v
 
-	best_score = -int('inf')
+	best_score = -float('inf')
 	best_actions = []
 	for action in game.actions(state):
 		new_state = game.result(state, action)
 
 		score = max_value(new_state)
 
-		if score_for_this_action > best_score:
+		if score > best_score:
 			best_score = score
-			best_actions[actions]
+			best_actions = [action]
 
 		elif score == best_score:
 			best_actions.append(action)
@@ -105,16 +105,16 @@ def minmax_cutoff(game, state):
 			return value
 
 		v = -float('inf')
-		for action in game.actions(current_state):
+		for action in game.actions(cur_state):
 			v = max(v, min_value(game.result(cur_state, action), depth + 1))
-		
+
 		memo[state_key_d] = v
 		return v
 
 	def min_value(cur_state, depth):
-		state_key = (frozenset(cur_state.board.items()), cur_state.to_move, depth)
+		state_key_d = (frozenset(cur_state.board.items()), cur_state.to_move, depth)
 		if (state_key_d) in memo:
-			return memo[state_key_depth]
+			return memo[state_key_d]
 
 		if game.terminal_test(cur_state):
 			value = game.utility(cur_state, player)
@@ -139,6 +139,7 @@ def minmax_cutoff(game, state):
 	for action in game.actions(state):
 		new_state = game.result(state, action)
 		score = max_value(new_state, initial_depth + 1)
+		print(f"score is {score}")
 
 		if score > best_score:
 			best_score = score
@@ -160,6 +161,7 @@ def alpha_beta(game, state):
 	alpha = -np.inf
 	beta = np.inf
 	best_action = None
+	memo = {}
 		
 	def max_value(cur_state, alpha, beta):
 		state_key = (frozenset(cur_state.board.items()), cur_state.to_move)
@@ -201,7 +203,7 @@ def alpha_beta(game, state):
 		memo[state_key] = v
 		return v
 
-	best_score = -float('inf')
+	best_score = float('-inf')
 
 	for action in game.actions(state):
 		new_state = game.result(state, action)
@@ -219,7 +221,6 @@ def alpha_beta(game, state):
 		return random.choice(best_actions)
 	else:
 		return None
-
 
 def alpha_beta_cutoff(game, state):
 	"""Search game to determine best action; use alpha-beta pruning.
@@ -311,7 +312,6 @@ def alpha_beta_cutoff(game, state):
 def random_player(game, state):
 	"""A random player that chooses a legal move at random."""
 	return random.choice(game.actions(state)) if game.actions(state) else None
-
 
 def alpha_beta_player(game, state):
 	"""uses alphaBeta prunning with minmax, or with cutoff version, for AI player"""
@@ -534,9 +534,54 @@ class TicTacToe(Game):
 		and also it needs to be fast to compute.
 		"""
 
-		print("Your code goes here 15pt.")
+		board = state.board
+		score = 0
 
-		return 0
+		def count_pieces(coords, p_symbol):
+			p_count = 0
+			o_count = 0
+			op_symbol = 'O' if p_symbol == 'X' else 'X'
+			
+			for r, c in coords:
+				if board.get((r, c)) == p_symbol:
+					p_count += 1
+				elif board.get((r, c)) == op_symbol:
+					o_count += 1
+			return p_count, o_count
+
+			POINTS_K_MINUS_1 = 100
+			POINTS_K_MINUS_2 = 10
+			POINTS_K_MINUS_3 = 1
+
+			directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+
+			for row in range(1, self.size + 1):
+				for column in range(1, self.size + 1):
+					for dc, dc in directions:
+						line_coords = []
+						valid_line = True
+						for i in range(self.k):
+							r, c = row + i * dr, c_start + i * dc
+							if not (1 <= r <= self.size and 1 <= c <= self.size):
+								valid_line = False
+								break
+							line_coords.append((r, c))
+
+						if not valid_line:
+							continue
+
+						x_count, o_count = count_pieces(line_coords, 'X')
+						if o_block_count == 0:
+							if x_count == self.k - 1: score += POINTS_K_MINUS_1
+							elif x_count == self.k - 2: score += POINTS_K_MINUS_2
+							elif x_count == self.k - 3: score += POINTS_K_MINUS_3
+
+						o_count, x_block_count = count_pieces_in_line(line_coords, 'O')
+						if x_block_count == 0:
+							if o_count == self.k - 1: score -= POINTS_K_MINUS_1
+							elif o_count == self.k - 2: score -= POINTS_K_MINUS_2
+							elif o_count == self.k - 3: score -= POINTS_K_MINUS_3
+		return score
 
 
 	#@staticmethod
