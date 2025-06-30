@@ -216,7 +216,7 @@ if __name__ == "__main__":
     w.pack(side=BOTTOM)
     create_frames(root)
     choices = StringVar(root)
-    choices.set("AlphaBeta")
+    choices.set("Random")
     menu = OptionMenu(root, choices, "Random", "MinMax", "AlphaBeta", "MonteCarlo")
     menu.pack(side=TOP) 
 

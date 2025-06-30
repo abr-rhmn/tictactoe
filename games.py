@@ -48,8 +48,8 @@ def minmax(game, state):
 		v = -np.inf
 		for a in game.actions(cur_state):
 			v = max(v, min_value(game.result(cur_state, a)))
+		
 		memo[state_key] = v
-		print(f"max_v score is {v}")
 		return v
 
 	def min_value(cur_state):
@@ -68,15 +68,12 @@ def minmax(game, state):
 		for a in game.actions(cur_state):
 			v = min(v, max_value(game.result(cur_state, a)))
 		memo[state_key] = v # Store result in cache
-		print(f"min_v score is {v}")
 		return v
 
 	best_score = -float('inf')
 	best_actions = []
 	for action in game.actions(state):
-		new_state = game.result(state, action)
-
-		score = max_value(new_state)
+		score = min_value(game.result(state, action))
 
 		if score > best_score:
 			best_score = score
@@ -85,11 +82,10 @@ def minmax(game, state):
 		elif score == best_score:
 			best_actions.append(action)
 
-		if best_actions:
-			print(f"Chosen action: {random.choice(best_actions)}")
-			return random.choice(best_actions)
-		else:
-			return None
+	if best_actions:
+		return random.choice(best_actions)
+	else:
+		return None
 
 def minmax_cutoff(game, state):
 	player = game.to_move(state)
@@ -144,8 +140,7 @@ def minmax_cutoff(game, state):
 
 	for action in game.actions(state):
 		new_state = game.result(state, action)
-		score = max_value(new_state, initial_depth + 1)
-		print(f"score is {score}")
+		score = min_value(new_state, initial_depth + 1)
 
 		if score > best_score:
 			best_score = score
@@ -209,109 +204,91 @@ def alpha_beta(game, state):
 		memo[state_key] = v
 		return v
 
-	best_score = float('-inf')
+	best_score = -float('inf')
+	best_action = None
+	alpha = -float('inf')
+	beta = float('inf')
+	initial_depth = 0
 
 	for action in game.actions(state):
-		new_state = game.result(state, action)
-		score_for_this_action = max_value(new_state, alpha, beta)
+		score = min_value(game.result(state, action), alpha, beta)
 
-		if score_for_this_action > best_score:
-			best_score = score_for_this_action
-			best_actions = [action]
-		elif score_for_this_action == best_score:
-			best_actions.append(action)
-		
+		if score > best_score:
+			best_score = score
+			best_action = action
+
 		alpha = max(alpha, best_score)
 
-	if best_actions:
-		return random.choice(best_actions)
-	else:
-		return None
+	return best_action
 
 def alpha_beta_cutoff(game, state):
 	"""Search game to determine best action; use alpha-beta pruning.
 	This version cuts off search and uses an evaluation function."""
 	player = game.to_move(state)
-
-	alpha = -np.inf
-	beta = np.inf
-	best_action = None
-
-	current_best_score = -float('inf')
-	candidate_actions = []
-
 	memo = {}
 		
-	def max_value(cur_state, depth, current_alpha, current_beta):
+	def max_value(cur_state, depth, alpha, beta):
 		state_key_d = (frozenset(cur_state.board.items()), cur_state.to_move, depth)
 		if state_key_d in memo:
 			return memo[state_key_d]
 
 		if game.terminal_test(cur_state):
-			value = game.utility(cur_state, player)
-			memo[state_key_d] = value
-			return value
+			return game.utility(cur_state, player)
 
 		if game.d != -1 and depth >= game.d:
-			value = game.eval1(cur_state)
-			memo[state_key_d] = value
-			return value
+			return game.eval1(cur_state)
 
 		v = -float('inf')
 		for action in game.actions(cur_state):
-			v = max(v, min_value(game.result(cur_state, action), depth + 1, current_alpha, current_beta))
-			if v >= current_beta:
+			v = max(v, min_value(game.result(cur_state, action), depth +  1, alpha, beta))
+
+			if v >= beta:
 				memo[state_key_d] = v
 				return v
-			current_alpha = max(current_alpha, v)
+
+			alpha = max(alpha, v)
+
 		memo[state_key_d] = v
 		return v
 
-	def min_value(cur_state, depth, current_alpha, current_beta):
+	def min_value(cur_state, depth, alpha, beta):
 		state_key_d = (frozenset(cur_state.board.items()), cur_state.to_move, depth)
 		if state_key_d in memo:
 			return memo[state_key_d]
 
 		if game.terminal_test(cur_state):
-			value = game.utility(cur_state, player)
-			memo[state_key_d] = value
-			return value
+			return game.utility(cur_state, player)
 
 		if game.d != -1 and depth >= game.d:
-			value = -game.eval1(cur_state)
-			memo[state_key_d] = value
-			return value
+			return game.eval1(cur_state)
 
 		v = float('inf')
 		for action in game.actions(cur_state):
-			v = min(v, max_value(game.result(cur_state, action), depth + 1, current_alpha, current_beta))
-			if v <= current_alpha:
+			v = min(v, max_value(game.result(cur_state, action), depth + 1, alpha, beta))
+
+			if v <= alpha:
 				memo[state_key_d] = v
 				return v
-			current_beta = min(current_beta, v)
+
+			beta = min(beta, v)
+
 		memo[state_key_d] = v
 		return v
 
-	# Body of alpha_beta_cutoff_search starts here:
-	# The default test cuts off at depth d or at a terminal state
+	best_score = -float('inf')
+	best_action = None
+	alpha = -float('inf')
+	beta = float('inf')
 	initial_depth = 0
 
 	for action in game.actions(state):
-		new_state = game.result(state, action)
-		score_for_this_action = max_value(new_state, initial_depth + 1, alpha, beta)
+		score = min_value(game.result(state, action), initial_depth + 1, alpha, beta)
 
-		if score_for_this_action > current_best_score:
-			current_best_score = score_for_this_action
-			candidate_actions = [action]
-		elif score_for_this_action == current_best_score:
-			candidate_actions.append(action)
-		
-		alpha = max(alpha, current_best_score)
+		if score > best_score:
+			best_score = score
+			best_action = action
 
-	if candidate_actions:
-		best_action = random.choice(candidate_actions)
-	else:
-		best_action = None
+		alpha = max(alpha, best_score)
 
 	return best_action
 
@@ -356,7 +333,6 @@ def alpha_beta_player(game, state):
 		print("iterative deepening to depth: ", game.d)
 		
 	return move
-
 
 def minmax_player(game, state):
 	"""uses minmax or minmax with cutoff depth, for AI player"""
@@ -508,19 +484,15 @@ class TicTacToe(Game):
 
 	def compute_utility(self, board, player):
 		
-		if player == 'X':
-			if (self.k_in_row(board, 'X', (0, 1), self.k, self.size)[0] or
-				self.k_in_row(board, 'X', (1, 0), self.k, self.size)[0] or
-				self.k_in_row(board, 'X', (1, 1), self.k, self.size)[0] or
-				self.k_in_row(board, 'X', (1, -1), self.k, self.size)[0]):
-					return self.k
+		directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
 
-		elif player == 'O':
-			if (self.k_in_row(board, 'O', (0, 1), self.k, self.size)[0] or
-				self.k_in_row(board, 'O', (1, 0), self.k, self.size)[0] or
-				self.k_in_row(board, 'O', (1, 1), self.k, self.size)[0] or
-				self.k_in_row(board, 'O', (1, -1), self.k, self.size)[0]):
-					return -self.k
+		for direction in directions:
+			if self.k_in_row(board, 'X', direction, self.k, self.size)[0]:
+				return self.k
+
+		for direction in directions:
+			if self.k_in_row(board, 'O', direction, self.k, self.size)[0]:
+				return -self.k
 
 		return 0
 		
@@ -538,54 +510,50 @@ class TicTacToe(Game):
 		and also it needs to be fast to compute.
 		"""
 
+		print("eval1 called")
+
+		if self.terminal_test(state):
+			return self.utility(state, 'X')
+
+		def score_line(line):
+			o_count = line.count('O')
+			x_count = line.count('X')
+
+			if o_count > 0 and x_count > 0:
+				return 0
+			if o_count > 0:
+				return 10 ** o_count
+			if x_count > 0:
+				return -(10 ** x_count)
+			return 0
+
+		total_score = 0
 		board = state.board
-		score = 0
 
-		def count_pieces(coords, p_symbol):
-			p_count = 0
-			o_count = 0
-			op_symbol = 'O' if p_symbol == 'X' else 'X'
-			
-			for r, c in coords:
-				if board.get((r, c)) == p_symbol:
-					p_count += 1
-				elif board.get((r, c)) == op_symbol:
-					o_count += 1
-			return p_count, o_count
+		# 1. Rows
+		for r in range(1, self.size + 1):
+			for c in range(1, self.size - self.k + 2):
+				line = [board.get((r, c + i), '.') for i in range(self.k)]
+				total_score += score_line(line)
 
-			POINTS_K_MINUS_1 = 100
-			POINTS_K_MINUS_2 = 10
-			POINTS_K_MINUS_3 = 1
+		# 2. Columns
+		for c in range(1, self.size + 1):
+			for r in range(1, self.size - self.k + 2):
+				line = [board.get((r + i, c), '.') for i in range(self.k)]
+				total_score += score_line(line)
 
-			directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+		# 3. Main Diagonals
+		for r in range(1, self.size - self.k + 2):
+			for c in range(1, self.size - self.k + 2):
+				line = [board.get((r + i, c + i), '.') for i in range(self.k)]
+				total_score += score_line(line)
 
-			for row in range(1, self.size + 1):
-				for column in range(1, self.size + 1):
-					for dc, dc in directions:
-						line_coords = []
-						valid_line = True
-						for i in range(self.k):
-							r, c = row + i * dr, c_start + i * dc
-							if not (1 <= r <= self.size and 1 <= c <= self.size):
-								valid_line = False
-								break
-							line_coords.append((r, c))
+		for r in range(1, self.size - self.k + 2):
+			for c in range(self.k, self.size + 1):
+				line = [board.get((r + i, c - i), '.') for i in range(self.k)]
+				total_score += score_line(line)
 
-						if not valid_line:
-							continue
-
-						x_count, o_count = count_pieces(line_coords, 'X')
-						if o_block_count == 0:
-							if x_count == self.k - 1: score += POINTS_K_MINUS_1
-							elif x_count == self.k - 2: score += POINTS_K_MINUS_2
-							elif x_count == self.k - 3: score += POINTS_K_MINUS_3
-
-						o_count, x_block_count = count_pieces_in_line(line_coords, 'O')
-						if x_block_count == 0:
-							if o_count == self.k - 1: score -= POINTS_K_MINUS_1
-							elif o_count == self.k - 2: score -= POINTS_K_MINUS_2
-							elif o_count == self.k - 3: score -= POINTS_K_MINUS_3
-		return score
+		return total_score if state.to_move == 'O' else -total_score
 
 
 	#@staticmethod
@@ -640,91 +608,3 @@ class TicTacToe(Game):
 
 		return count > 0, count
 
-# if __name__ == "__main__":
-# 	print("Running tests for games.py...")
-
-# 	# Create a TicTacToe game instance for testing
-# 	# Assuming default 3x3 for simplicity
-# 	test_game = TicTacToe(size=3, k=3)
-
-# 	# --- Test Cases for compute_utility ---
-# 	print("\nTesting compute_utility...")
-
-# 	# Test 1: X wins horizontally (top row)
-# 	# X . .
-# 	# X . .
-# 	# X . .
-# 	x_win_h_board_1 = {(1, 1): 'X', (1, 2): 'X', (1, 3): 'X'}
-# 	assert test_game.compute_utility(x_win_h_board_1, 'X') == test_game.k, "Test 1 Failed: X should win horizontally (row 1)"
-# 	print("Test 1 Passed: X horizontal win (row 1)")
-
-# 	# Test 2: O wins vertically (middle column)
-# 	# . O .
-# 	# . O .
-# 	# . O .
-# 	o_win_v_board_1 = {(1, 2): 'O', (2, 2): 'O', (3, 2): 'O'}
-# 	assert test_game.compute_utility(o_win_v_board_1, 'O') == -test_game.k, "Test 2 Failed: O should win vertically (col 2)"
-# 	print("Test 2 Passed: O vertical win (col 2)")
-
-# 	# Test 3: X wins diagonally (top-left to bottom-right)
-# 	# X . .
-# 	# . X .
-# 	# . . X
-# 	x_win_diag_board = {(1, 1): 'X', (2, 2): 'X', (3, 3): 'X'}
-# 	assert test_game.compute_utility(x_win_diag_board, 'X') == test_game.k, "Test 3 Failed: X should win diagonally"
-# 	print("Test 3 Passed: X diagonal win")
-
-# 	# Test 4: O wins anti- diagonally (top-right to bottom-left)
-# 	# . . O
-# 	# . O .
-# 	# O . .
-# 	o_win_anti_diag_board = {(1, 3): 'O', (2, 2): 'O', (3, 1): 'O'}
-# 	assert test_game.compute_utility(o_win_anti_diag_board, 'O') == -test_game.k, "Test 4 Failed: O should win anti-diagonally"
-# 	print("Test 4 Passed: O anti-diagonal win")
-
-# 	# Test 5: A full board draw (no winner)
-# 	# X O X
-# 	# O O X
-# 	# X X O
-# 	draw_board = {
-# 		(1, 1): 'X', (1, 2): 'O', (1, 3): 'X',
-# 		(2, 1): 'O', (2, 2): 'O', (2, 3): 'X',
-# 		(3, 1): 'X', (3, 2): 'X', (3, 3): 'O'
-# 	}
-# 	assert test_game.compute_utility(draw_board, 'X') == 0, "Test 5 Failed: Should be a draw"
-# 	assert test_game.compute_utility(draw_board, 'O') == 0, "Test 5 Failed: Should be a draw for O's perspective"
-# 	print("Test 5 Passed: Full board draw")
-
-# 	# Test 6: An ongoing game (no winner yet)
-# 	# X . O
-# 	# . O .
-# 	# X . .
-# 	ongoing_board = {(1, 1): 'X', (1, 3): 'O', (2, 2): 'O', (3, 1): 'X'}
-# 	assert test_game.compute_utility(ongoing_board, 'X') == 0, "Test 6 Failed: Ongoing game should be 0"
-# 	print("Test 6 Passed: Ongoing game")
-
-
-# 	# --- Test Cases for k_in_row (indirectly through compute_utility if you didn't expose it,
-# 	#     but if k_in_row is meant to be tested directly, you can) ---
-# 	print("\nTesting k_in_row (direct tests, if applicable)...")
-
-# 	# Example: Direct test of k_in_row for a horizontal win
-# 	# . . .
-# 	# X X X
-# 	# . . .
-# 	k_in_row_test_board = {(2, 1): 'X', (2, 2): 'X', (2, 3): 'X'}
-# 	# Test k_in_row for X horizontally (dir=(0,1))
-# 	flag, count = test_game.k_in_row(k_in_row_test_board, 'X', (0, 1), 3, 3)
-# 	assert flag is True and count > 0, "Test 7 Failed: k_in_row should detect X horizontal win"
-# 	print("Test 7 Passed: k_in_row detects X horizontal win")
-
-# 	# Example: k_in_row where line is blocked by opponent
-# 	# X O X
-# 	# . . .
-# 	# . . .
-# 	blocked_line_board = {(1,1):'X', (1,2):'O', (1,3):'X'}
-# 	flag, count = test_game.k_in_row(blocked_line_board, 'X', (0,1), 3, 3)
-# 	assert flag is False and count == 0, "Test 8 Failed: k_in_row should show blocked line as no win"
-# 	print("Test 8 Passed: k_in_row detects blocked line")
-
-# 	print("\nAll tests completed.")

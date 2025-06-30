@@ -27,8 +27,9 @@ class MCTS:
 		def getChildWithMaxScore(self):
 			
 			if not self.children:
+				print("no children found\n")
 				return None
-      
+			
 			maxScoreChild = max(self.children, key=lambda x: x.visitCount)
 			return maxScoreChild
 
@@ -41,57 +42,59 @@ class MCTS:
 		
 	def monteCarloPlayer(self, timelimit = 4):
 		"""Entry point for Monte Carlo tree search"""
-		start = time.perf_counter()
-		end = start + timelimit
-		"""
-		Use time.perf_counter() to apply iterative deepening strategy.
-		 At each iteration we perform 4 stages of MCTS: 
-		 SELECT, 
-		 EXPEND, 
-		 SIMULATE, 
-		 and BACKUP. 
-		 
-		 Once time is up use getChildWithMaxScore() to pick the node to move to
-		"""
-		
-		while time.perf_counter() < end:
-			node_to_explore = self.selectNode(self.root)
 
-			if not self.game.terminal_test(node_to_explore.state) and not node_to_explore.children:
-				self.expandNode(node_to_explore)
+		if timelimit > 0:
+			start = time.perf_counter()
+			end = start + timelimit
+			while (time.perf_counter() < end):
+				# --- Start of inlined run_simulation logic ---
+				node_to_explore = self.selectNode(self.root)
+
+				if not self.game.terminal_test(node_to_explore.state):
+					self.expandNode(node_to_explore)
+				
+				node_for_simulation = node_to_explore
 				if node_to_explore.children:
 					node_for_simulation = random.choice(node_to_explore.children)
-				else:
-					node_for_simulation = node_to_explore
-			else:
+
+				winning_player = self.simulateRandomPlay(node_for_simulation)
+				self.backPropagation(node_for_simulation, winning_player)
+				# --- End of inlined run_simulation logic ---
+		
+		# Untimed search (fixed number of simulations)
+		else:
+			num_simulations = 15000
+			for _ in range(num_simulations):
+				# --- Start of inlined run_simulation logic ---
+				node_to_explore = self.selectNode(self.root)
+
+				if not self.game.terminal_test(node_to_explore.state):
+					self.expandNode(node_to_explore)
+				
 				node_for_simulation = node_to_explore
+				if node_to_explore.children:
+					node_for_simulation = random.choice(node_to_explore.children)
 
-			winning_player = self.simulateRandomPlay(node_for_simulation)
+				winning_player = self.simulateRandomPlay(node_for_simulation)
+				self.backPropagation(node_for_simulation, winning_player)
+				# --- End of inlined run_simulation logic ---
 
-			self.backPropagation(node_for_simulation, winning_player)
-
-		winnerNode = self.root.getChildWithMaxScore()
-		assert(winnerNode is not None)
-		return winnerNode.state.move
+		# After simulations, choose the best child move.
+		winner = self.root.getChildWithMaxScore()
+		assert(winner is not None)
+		return winner.state.move
 
 
 	"""SELECT stage function. walks down the tree using findBestNodeWithUCT()"""
 	def selectNode(self, nd):
 		node = nd
 
-		while not self.game.terminal_test(node.state) and (node.children and all(child.visitCount > 0 for child in node.children)):
+		while not self.game.terminal_test(node.state) and \
+			(len(node.children) > 0 and all(child.visitCount > 0 for child in node.children)):
 			node = self.findBestNodeWithUCT(node)
-			if node is None:
-				break
-
 		return node
 
 	def findBestNodeWithUCT(self, nd):
-		unvisited_children = [child for child in nd.children if child.visitCount == 0]
-		if unvisited_children:
-			return random.choice(unvisited_children)
-
-		
 		maxUCT = -float('inf')
 		chosenChild = None
 
@@ -103,7 +106,6 @@ class MCTS:
 			if uct > maxUCT:
 				maxUCT = uct
 				chosenChild = child
-
 		return chosenChild
 
 	def uctValue(self, parentVisit, nodeScore, nodeVisit):
@@ -112,7 +114,7 @@ class MCTS:
 		
 		UCT = (nodeScore/nodeVisit) + self.exploreFactor * math.sqrt(math.log(parentVisit) / nodeVisit)
 		return UCT
-   
+	 
 	def expandNode(self, nd):
 		stat = nd.state
 		if self.game.terminal_test(stat):
@@ -138,35 +140,25 @@ class MCTS:
 			random_move = random.choice(possible_moves)
 			current_state = self.game.result(current_state, random_move)
 		
-		utility_for_X = self.game.utility(current_state, 'X')
+		x_utility = self.game.compute_utility(current_state.board, 'X')
 
-		if utility_for_X == self.game.k:
-			return 'X'
-		elif utility_for_X == -self.game.k:
-			return 'O'
-		else:
-			return 0 
-
+		if x_utility > 0: return 'X'
+		if x_utility < 0: return 'O'
+		return 0
 
 	def backPropagation(self, nd, winningPlayer):
-		print(f"DEBUG: backPropagation called with nd: {nd}") # Add this line
+		
 		node = nd
-		node = node.parent
 
-		while node != None:
+		while node is not None:
 			node.visitCount += 1
 
-			if winningPlayer == node.state.to_move:
-				node.winScore += 1
-
-			elif winningPlayer == 'O':
-				node.winScore -= 1
-
+			if winningPlayer == 'O':
+				node.winScore += 1.0
+			elif winningPlayer == 'X':
+				node.winScore -= 1.0
 			elif winningPlayer == 0:
-				node.winScore += 0.5
-
-			node = node.par
-
-		return
+				node.winScore += 0
+			node = node.parent
 
 
