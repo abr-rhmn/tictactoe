@@ -78,25 +78,39 @@ class MCTS:
 	"""SELECT stage function. walks down the tree using findBestNodeWithUCT()"""
 	def selectNode(self, nd):
 		node = nd
-		while node.children:
-			node = self.findBestNodeWithUCT(nd.visitCount, child.winScore, child.visitCount)
+
+		while not self.game.terminal_test(node.state) and (node.children and all(child.visitCount > 0 for child in node.children)):
+			node = self.findBestNodeWithUCT(node)
+			if node is None:
+				break
 
 		return node
 
 	def findBestNodeWithUCT(self, nd):
+		unvisited_children = [child for child in nd.children if child.visitCount == 0]
+		if unvisited_children:
+			return random.choice(unvisited_children)
+
+		
 		maxUCT = -float('inf')
-		chosenChild = nd
+		chosenChild = None
+
+		if not nd.children:
+			return None
+
 		for child in nd.children:
-			uct = uctValue(self, child.visitCount, child.winScore)
+			uct = self.uctValue(nd.visitCount, child.winScore, child.visitCount)
 			if uct > maxUCT:
 				maxUCT = uct
 				chosenChild = child
 
-
 		return chosenChild
 
 	def uctValue(self, parentVisit, nodeScore, nodeVisit):
-		UCT = (nodeScore/nodeVisit) + self.exploreFactor * math.sqrt(log(parentVisit) / nodeVisit)
+		if nodeVisit == 0:
+			return float('inf')
+		
+		UCT = (nodeScore/nodeVisit) + self.exploreFactor * math.sqrt(math.log(parentVisit) / nodeVisit)
 		return UCT
    
 	def expandNode(self, nd):
