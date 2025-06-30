@@ -25,6 +25,10 @@ class MCTS:
 			self.winScore = 0
 
 		def getChildWithMaxScore(self):
+			
+			if not self.children:
+				return None
+      
 			maxScoreChild = max(self.children, key=lambda x: x.visitCount)
 			return maxScoreChild
 
@@ -74,10 +78,10 @@ class MCTS:
 	"""SELECT stage function. walks down the tree using findBestNodeWithUCT()"""
 	def selectNode(self, nd):
 		node = nd
-		while node.children is not empty:
-			node = findBestNodeWithUCT(self, node)
+		while node.children:
+			node = self.findBestNodeWithUCT(nd.visitCount, child.winScore, child.visitCount)
 
-		return
+		return node
 
 	def findBestNodeWithUCT(self, nd):
 		maxUCT = -float('inf')
@@ -92,7 +96,7 @@ class MCTS:
 		return chosenChild
 
 	def uctValue(self, parentVisit, nodeScore, nodeVisit):
-		UCT = (nodeScore/nodeVisit) + self.exploreFactor * sqrt(log(parentVisit) / nodeVisit)
+		UCT = (nodeScore/nodeVisit) + self.exploreFactor * math.sqrt(log(parentVisit) / nodeVisit)
 		return UCT
    
 	def expandNode(self, nd):
@@ -117,8 +121,9 @@ class MCTS:
 			if not possible_moves:
 				break
 
-		random_move = random.choice(possible_moves)
-		current_state = self.game.result(current_state, random_move)
+			random_move = random.choice(possible_moves)
+			current_state = self.game.result(current_state, random_move)
+		
 		utility_for_X = self.game.utility(current_state, 'X')
 
 		if utility_for_X == self.game.k:
@@ -130,7 +135,9 @@ class MCTS:
 
 
 	def backPropagation(self, nd, winningPlayer):
+		print(f"DEBUG: backPropagation called with nd: {nd}") # Add this line
 		node = nd
+		node = node.parent
 
 		while node != None:
 			node.visitCount += 1
@@ -140,6 +147,9 @@ class MCTS:
 
 			elif winningPlayer == 'O':
 				node.winScore -= 1
+
+			elif winningPlayer == 0:
+				node.winScore += 0.5
 
 			node = node.par
 

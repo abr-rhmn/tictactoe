@@ -44,10 +44,12 @@ def minmax(game, state):
 			value = game.utility(cur_state, player)
 			memo[state_key] = value
 			return value
+		
 		v = -np.inf
 		for a in game.actions(cur_state):
 			v = max(v, min_value(game.result(cur_state, a)))
 		memo[state_key] = v
+		print(f"max_v score is {v}")
 		return v
 
 	def min_value(cur_state):
@@ -58,11 +60,15 @@ def minmax(game, state):
 			return memo[state_key]
 		
 		if game.terminal_test(cur_state):
-			return game.utility(cur_state, player)
+			value = game.utility(cur_state, player)
+			memo[state_key] = value
+			return value
+		
 		v = np.inf
 		for a in game.actions(cur_state):
 			v = min(v, max_value(game.result(cur_state, a)))
 		memo[state_key] = v # Store result in cache
+		print(f"min_v score is {v}")
 		return v
 
 	best_score = -float('inf')
@@ -80,10 +86,10 @@ def minmax(game, state):
 			best_actions.append(action)
 
 		if best_actions:
+			print(f"Chosen action: {random.choice(best_actions)}")
 			return random.choice(best_actions)
 		else:
 			return None
-
 
 def minmax_cutoff(game, state):
 	player = game.to_move(state)
@@ -358,7 +364,7 @@ def minmax_player(game, state):
 	if len(state.board) < 2:
 		return random_player(game, state)
 
-	if( game.timer < 0):
+	if(game.timer < 0):
 		game.d = -1 #no depth cutoff limit of no time limit is set
 		return minmax(game, state)
 
@@ -385,8 +391,6 @@ def minmax_player(game, state):
 			break
 
 	return move
-
-
 
 # ______________________________________________________________________________
 # base class for Games
@@ -636,3 +640,91 @@ class TicTacToe(Game):
 
 		return count > 0, count
 
+# if __name__ == "__main__":
+# 	print("Running tests for games.py...")
+
+# 	# Create a TicTacToe game instance for testing
+# 	# Assuming default 3x3 for simplicity
+# 	test_game = TicTacToe(size=3, k=3)
+
+# 	# --- Test Cases for compute_utility ---
+# 	print("\nTesting compute_utility...")
+
+# 	# Test 1: X wins horizontally (top row)
+# 	# X . .
+# 	# X . .
+# 	# X . .
+# 	x_win_h_board_1 = {(1, 1): 'X', (1, 2): 'X', (1, 3): 'X'}
+# 	assert test_game.compute_utility(x_win_h_board_1, 'X') == test_game.k, "Test 1 Failed: X should win horizontally (row 1)"
+# 	print("Test 1 Passed: X horizontal win (row 1)")
+
+# 	# Test 2: O wins vertically (middle column)
+# 	# . O .
+# 	# . O .
+# 	# . O .
+# 	o_win_v_board_1 = {(1, 2): 'O', (2, 2): 'O', (3, 2): 'O'}
+# 	assert test_game.compute_utility(o_win_v_board_1, 'O') == -test_game.k, "Test 2 Failed: O should win vertically (col 2)"
+# 	print("Test 2 Passed: O vertical win (col 2)")
+
+# 	# Test 3: X wins diagonally (top-left to bottom-right)
+# 	# X . .
+# 	# . X .
+# 	# . . X
+# 	x_win_diag_board = {(1, 1): 'X', (2, 2): 'X', (3, 3): 'X'}
+# 	assert test_game.compute_utility(x_win_diag_board, 'X') == test_game.k, "Test 3 Failed: X should win diagonally"
+# 	print("Test 3 Passed: X diagonal win")
+
+# 	# Test 4: O wins anti- diagonally (top-right to bottom-left)
+# 	# . . O
+# 	# . O .
+# 	# O . .
+# 	o_win_anti_diag_board = {(1, 3): 'O', (2, 2): 'O', (3, 1): 'O'}
+# 	assert test_game.compute_utility(o_win_anti_diag_board, 'O') == -test_game.k, "Test 4 Failed: O should win anti-diagonally"
+# 	print("Test 4 Passed: O anti-diagonal win")
+
+# 	# Test 5: A full board draw (no winner)
+# 	# X O X
+# 	# O O X
+# 	# X X O
+# 	draw_board = {
+# 		(1, 1): 'X', (1, 2): 'O', (1, 3): 'X',
+# 		(2, 1): 'O', (2, 2): 'O', (2, 3): 'X',
+# 		(3, 1): 'X', (3, 2): 'X', (3, 3): 'O'
+# 	}
+# 	assert test_game.compute_utility(draw_board, 'X') == 0, "Test 5 Failed: Should be a draw"
+# 	assert test_game.compute_utility(draw_board, 'O') == 0, "Test 5 Failed: Should be a draw for O's perspective"
+# 	print("Test 5 Passed: Full board draw")
+
+# 	# Test 6: An ongoing game (no winner yet)
+# 	# X . O
+# 	# . O .
+# 	# X . .
+# 	ongoing_board = {(1, 1): 'X', (1, 3): 'O', (2, 2): 'O', (3, 1): 'X'}
+# 	assert test_game.compute_utility(ongoing_board, 'X') == 0, "Test 6 Failed: Ongoing game should be 0"
+# 	print("Test 6 Passed: Ongoing game")
+
+
+# 	# --- Test Cases for k_in_row (indirectly through compute_utility if you didn't expose it,
+# 	#     but if k_in_row is meant to be tested directly, you can) ---
+# 	print("\nTesting k_in_row (direct tests, if applicable)...")
+
+# 	# Example: Direct test of k_in_row for a horizontal win
+# 	# . . .
+# 	# X X X
+# 	# . . .
+# 	k_in_row_test_board = {(2, 1): 'X', (2, 2): 'X', (2, 3): 'X'}
+# 	# Test k_in_row for X horizontally (dir=(0,1))
+# 	flag, count = test_game.k_in_row(k_in_row_test_board, 'X', (0, 1), 3, 3)
+# 	assert flag is True and count > 0, "Test 7 Failed: k_in_row should detect X horizontal win"
+# 	print("Test 7 Passed: k_in_row detects X horizontal win")
+
+# 	# Example: k_in_row where line is blocked by opponent
+# 	# X O X
+# 	# . . .
+# 	# . . .
+# 	blocked_line_board = {(1,1):'X', (1,2):'O', (1,3):'X'}
+# 	flag, count = test_game.k_in_row(blocked_line_board, 'X', (0,1), 3, 3)
+# 	assert flag is False and count == 0, "Test 8 Failed: k_in_row should show blocked line as no win"
+# 	print("Test 8 Passed: k_in_row detects blocked line")
+
+# 	print("\nAll tests completed.")
